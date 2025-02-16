@@ -1,0 +1,36 @@
+# Source code
+src/
+tests/
+__tests__/
+
+# Configuration files
+.github/
+.gitignore
+.npmignore
+.eslintrc
+.prettierrc
+jest.config.js
+tsconfig.json
+
+# Documentation and examples
+docs/
+examples/
+*.md
+!README.md
+!CHANGELOG.md
+!LICENSE
+
+# Development files
+.env*
+*.log
+coverage/
+.vscode/
+.idea/
+.DS_Store
+
+# Source maps
+*.map
+
+# Test files
+*.test.ts
+*.spec.ts 
