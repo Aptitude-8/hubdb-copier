@@ -8,12 +8,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/hubdb-copier.git"
+    "url": "git+https://github.com/Aptitude-8/hubdb-copier.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/hubdb-copier/issues"
+    "url": "https://github.com/Aptitude-8/hubdb-copier/issues"
   },
-  "homepage": "https://github.com/yourusername/hubdb-copier#readme",
+  "homepage": "https://github.com/Aptitude-8/hubdb-copier/blob/main/README.md",
   "author": {
     "name": "Chris Stone",
     "email": "chris@cstone.io"
