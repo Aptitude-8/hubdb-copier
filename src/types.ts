@@ -98,4 +98,5 @@ export interface ImportConfig {
 export interface CliOptions {
   sourceToken: string;
   targetToken: string;
+  copyContent?: boolean;
 }
