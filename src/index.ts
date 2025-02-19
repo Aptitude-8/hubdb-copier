@@ -126,6 +126,13 @@ async function copyTable(
             };
           }
 
+          if (column.type === "FILE") {
+            return {
+              ...baseColumn,
+              fileType: column.fileType || "DOCUMENT", // Ensure fileType is set
+            };
+          }
+
           return baseColumn;
         }),
       allowPublicApiAccess: true,
