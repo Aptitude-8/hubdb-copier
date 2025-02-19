@@ -19,6 +19,7 @@ program
   .description("Copy HubDB tables between HubSpot portals")
   .option("-s, --source-token <token>", "Source HubSpot API token")
   .option("-t, --target-token <token>", "Target HubSpot API token")
+  .option("--copy-content", "Copy table content", false)
   .version("1.0.0");
 
 async function getAllTables(client: HubSpotClient): Promise<HubDBTable[]> {
@@ -50,7 +51,8 @@ async function getAllTables(client: HubSpotClient): Promise<HubDBTable[]> {
 async function copyTable(
   sourceClient: HubSpotClient,
   targetClient: HubSpotClient,
-  table: HubDBTable
+  table: HubDBTable,
+  copyContent: boolean
 ): Promise<void> {
   const spinner = ora(`Copying table: ${table.name}`).start();
 
@@ -69,26 +71,28 @@ async function copyTable(
       )
     );
 
-    // First, export data from source table
-    spinner.text = `Exporting data from source table (ID: ${table.id})...`;
-    let csvData: string;
-    try {
-      csvData = await sourceClient.exportTable(table.id);
-    } catch (exportError) {
-      if (
-        axios.isAxiosError(exportError) &&
-        exportError.response?.status === 404
-      ) {
-        // Try using table name if ID fails
-        spinner.text = `Retrying export using table name: ${table.name}...`;
-        csvData = await sourceClient.exportTable(table.name);
-      } else {
-        throw exportError;
+    let csvData: string | undefined;
+    if (copyContent) {
+      // First, export data from source table
+      spinner.text = `Exporting data from source table (ID: ${table.id})...`;
+      try {
+        csvData = await sourceClient.exportTable(table.id);
+      } catch (exportError) {
+        if (
+          axios.isAxiosError(exportError) &&
+          exportError.response?.status === 404
+        ) {
+          // Try using table name if ID fails
+          spinner.text = `Retrying export using table name: ${table.name}...`;
+          csvData = await sourceClient.exportTable(table.name);
+        } else {
+          throw exportError;
+        }
       }
+      spinner.succeed(
+        `Successfully exported data from source table: ${table.name}`
+      );
     }
-    spinner.succeed(
-      `Successfully exported data from source table: ${table.name}`
-    );
 
     // Create new table in target portal
     spinner.text = `Creating table ${table.name} in target portal...`;
@@ -156,40 +160,42 @@ async function copyTable(
       `Successfully created table in target portal: ${newTable.name} (ID: ${newTable.id})`
     );
 
-    // Import data to target table
-    spinner.text = `Importing data to target table (ID: ${newTable.id})...`;
+    if (copyContent && csvData) {
+      // Import data to target table
+      spinner.text = `Importing data to target table (ID: ${newTable.id})...`;
 
-    // Create column mappings based on the CSV header (which matches source column names)
-    // The source numbers start at 1 (not 0) according to the docs
-    const columnMappings = table.columns
-      .filter((column) => column.type !== "FOREIGN_ID")
-      .map((column, index) => ({
-        source: index + 1, // CSV column index (1-based)
-        target: column.name, // Target column name in the new table
-      }));
+      // Create column mappings based on the CSV header (which matches source column names)
+      // The source numbers start at 1 (not 0) according to the docs
+      const columnMappings = table.columns
+        .filter((column) => column.type !== "FOREIGN_ID")
+        .map((column, index) => ({
+          source: index + 1, // CSV column index (1-based)
+          target: column.name, // Target column name in the new table
+        }));
 
-    console.log(chalk.blue("\nImporting to table with details:"), {
-      tableId: newTable.id,
-      tableName: newTable.name,
-      csvDataLength: csvData.length,
-      columnMappings,
-    });
-
-    try {
-      await targetClient.importTable(newTable.id, csvData, {
+      console.log(chalk.blue("\nImporting to table with details:"), {
+        tableId: newTable.id,
+        tableName: newTable.name,
+        csvDataLength: csvData.length,
         columnMappings,
-        skipRows: 1,
-        format: "csv",
-        separator: ",",
-        encoding: "utf-8",
-        resetTable: true,
       });
-      spinner.succeed(
-        `Successfully imported data to target table: ${newTable.name}`
-      );
-    } catch (importError) {
-      console.error("Import error details:", importError);
-      throw importError;
+
+      try {
+        await targetClient.importTable(newTable.id, csvData, {
+          columnMappings,
+          skipRows: 1,
+          format: "csv",
+          separator: ",",
+          encoding: "utf-8",
+          resetTable: true,
+        });
+        spinner.succeed(
+          `Successfully imported data to target table: ${newTable.name}`
+        );
+      } catch (importError) {
+        console.error("Import error details:", importError);
+        throw importError;
+      }
     }
 
     // Publish the table
@@ -226,6 +232,7 @@ async function main() {
     // Get tokens from command line arguments or environment variables
     const sourceToken = options.sourceToken || process.env.HUBSPOT_SOURCE_TOKEN;
     const targetToken = options.targetToken || process.env.HUBSPOT_TARGET_TOKEN;
+    const copyContent = options.copyContent;
 
     if (!sourceToken || !targetToken) {
       console.error(
@@ -292,7 +299,7 @@ async function main() {
     // Copy selected tables
     console.log(chalk.blue("\nStarting table copy process..."));
     for (const table of selectedTables) {
-      await copyTable(sourceClient, targetClient, table);
+      await copyTable(sourceClient, targetClient, table, copyContent);
     }
 
     console.log(chalk.green("\nTable copy process completed!"));

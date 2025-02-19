@@ -48,6 +48,7 @@ hubdb-copier
 - `-t, --target-token <token>`: Target HubSpot API token (optional if set in .env)
 - `-V, --version`: Output the version number
 - `-h, --help`: Display help information
+- `--copy-content`: Copy table content along with schema
 
 ### Example
 
