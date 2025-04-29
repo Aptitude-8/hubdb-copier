@@ -5,6 +5,7 @@ import {
   TableCreateRequest,
   HubDBTable,
   ImportConfig,
+  HubDBColumn,
 } from "./types";
 
 export class HubSpotClient {
@@ -151,5 +152,63 @@ export class HubSpotClient {
       `/cms/v3/hubdb/tables/${tableId}/draft/publish`
     );
     return response.data;
+  }
+
+  async getTableByName(name: string): Promise<HubDBTable | null> {
+    try {
+      const response = await this.client.get(`/cms/v3/hubdb/tables`, {
+        params: { name },
+      });
+
+      if (
+        response.data &&
+        response.data.results &&
+        response.data.results.length > 0
+      ) {
+        return response.data.results[0];
+      }
+
+      return null;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Get table by name error:", {
+          status: error.response?.status,
+          data: error.response?.data,
+        });
+      }
+      throw error;
+    }
+  }
+
+  async addColumnsToTable(
+    tableId: string,
+    columns: HubDBColumn[],
+    name: string,
+    label: string
+  ): Promise<void> {
+    try {
+      console.log("Adding columns to table", tableId, name, label, columns);
+      const response = await this.client.patch(
+        `/cms/v3/hubdb/tables/${tableId}/draft`,
+        {
+          columns: columns,
+          name: name,
+          label: label,
+        }
+      );
+
+      if (!response.data || !response.data.id) {
+        console.error("Invalid add columns response:", response.data);
+        throw new Error("Invalid response from add columns API");
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Add columns to table error:", {
+          status: error.response?.status,
+          data: error.response?.data,
+        });
+      }
+      throw error;
+    }
   }
 }
