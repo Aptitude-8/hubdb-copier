@@ -156,19 +156,16 @@ export class HubSpotClient {
 
   async getTableByName(name: string): Promise<HubDBTable | null> {
     try {
-      const response = await this.client.get(`/cms/v3/hubdb/tables`, {
-        params: { name },
-      });
+      console.log("Searching for table by name:", name);
+      const response = await this.client.get(`/cms/v3/hubdb/tables/${name}`);
 
-      if (
-        response.data &&
-        response.data.results &&
-        response.data.results.length > 0
-      ) {
-        return response.data.results[0];
+      if (response.data && response.data.id && response.data.name) {
+        console.log(`Table found with name ${name} and id ${response.data.id}`);
+        return response.data;
+      } else {
+        console.error("Invalid get table by name response:", response.data);
+        throw new Error("Invalid response from get table by name API");
       }
-
-      return null;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Get table by name error:", {
@@ -176,7 +173,14 @@ export class HubSpotClient {
           data: error.response?.data,
         });
       }
-      throw error;
+      // If the error status is 404, it means the table doesn't exist so return null
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        console.log("No table found with the given name", name);
+        return null;
+      } else {
+        // For other errors, rethrow
+        throw error;
+      }
     }
   }
 
