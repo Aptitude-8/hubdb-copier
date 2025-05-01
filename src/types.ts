@@ -99,4 +99,5 @@ export interface CliOptions {
   sourceToken: string;
   targetToken: string;
   copyContent?: boolean;
+  updateExisting?: boolean;
 }
