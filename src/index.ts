@@ -20,6 +20,7 @@ program
   .option("-s, --source-token <token>", "Source HubSpot API token")
   .option("-t, --target-token <token>", "Target HubSpot API token")
   .option("--copy-content", "Copy table content", false)
+  .option("--update-existing", "Update an existing table", false)
   .version("1.0.0");
 
 async function getAllTables(client: HubSpotClient): Promise<HubDBTable[]> {
@@ -28,7 +29,7 @@ async function getAllTables(client: HubSpotClient): Promise<HubDBTable[]> {
 
   do {
     const response = await client.listTables(after);
-    console.log("API Response:", JSON.stringify(response, null, 2));
+    //console.log("API Response:", JSON.stringify(response, null, 2));
 
     if (!response.results) {
       console.error("No results array in API response");
@@ -52,7 +53,8 @@ async function copyTable(
   sourceClient: HubSpotClient,
   targetClient: HubSpotClient,
   table: HubDBTable,
-  copyContent: boolean
+  copyContent: boolean,
+  updateExisting: boolean
 ): Promise<void> {
   const spinner = ora(`Copying table: ${table.name}`).start();
 
@@ -138,7 +140,12 @@ async function copyTable(
         return baseColumn;
       });
 
-    if (existingTable) {
+    if (existingTable && !updateExisting) {
+      spinner.fail(
+        `Table ${table.name} already exists in target portal. Use --update-existing to update.`
+      );
+      return;
+    } else if (existingTable) {
       spinner.succeed(
         `Table ${table.name} already exists in target portal. Adding missing columns...`
       );
@@ -284,6 +291,7 @@ async function main() {
     const sourceToken = options.sourceToken || process.env.HUBSPOT_SOURCE_TOKEN;
     const targetToken = options.targetToken || process.env.HUBSPOT_TARGET_TOKEN;
     const copyContent = options.copyContent;
+    const updateExisting = options.updateExisting;
 
     if (!sourceToken || !targetToken) {
       console.error(
@@ -350,7 +358,13 @@ async function main() {
     // Copy selected tables
     console.log(chalk.blue("\nStarting table copy process..."));
     for (const table of selectedTables) {
-      await copyTable(sourceClient, targetClient, table, copyContent);
+      await copyTable(
+        sourceClient,
+        targetClient,
+        table,
+        copyContent,
+        updateExisting
+      );
     }
 
     console.log(chalk.green("\nTable copy process completed!"));

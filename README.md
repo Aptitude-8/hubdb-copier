@@ -49,6 +49,7 @@ hubdb-copier
 - `-V, --version`: Output the version number
 - `-h, --help`: Display help information
 - `--copy-content`: Copy table content along with schema
+- `--update-existing`: Update existing tables in target portal
 
 ### Example
 
@@ -102,8 +103,15 @@ hubdb-copier
    npm run build
    ```
 5. Run in development mode:
+
    ```bash
    npm run dev
+   ```
+
+   To pass CLI options in development mode, add them after a double dash (--). For example, to include the option of `--update-existing`:
+
+   ```
+   npm run dev -- --update-existing
    ```
 
 ## License
